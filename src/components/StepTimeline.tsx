@@ -1,7 +1,7 @@
 type Step = {
   n: string;
   title: string;
-  phase: "Contexte" | "Objectif" | "Action" | "Résultat";
+  phase: string;
   phaseColor: string;
   description: string;
   image?: string;
@@ -9,150 +9,304 @@ type Step = {
   details: { label: string; value: string }[];
 };
 
-const steps: Step[] = [
-  {
-    n: "01",
-    title: "Planification du plan d'adressage",
-    phase: "Contexte",
-    phaseColor: "bg-amber-100 text-amber-800 border-amber-200",
-    description:
-      "Analyse du besoin et conception de la topologie réseau. Choix du bloc CIDR global et de sa segmentation en sous-réseaux pour héberger des ressources distinctes de manière sécurisée (public/privé).",
-    details: [
-      { label: "Région", value: "eu-west-1 (Europe - Irlande)" },
-      { label: "CIDR VPC", value: "10.2.0.0/16" },
-      { label: "Zones de disponibilité", value: "eu-west-1a, eu-west-1b" },
-    ],
-  },
-  {
-    n: "02",
-    title: "Définition des cibles d'interconnexion",
-    phase: "Objectif",
-    phaseColor: "bg-blue-100 text-blue-800 border-blue-200",
-    description:
-      "Ciblage des ressources AWS nécessaires pour former notre infrastructure cible. Établissement des dépendances et de la structure globale du projet de code Terraform (HCL).",
-    details: [
-      { label: "Outil de déploiement", value: "Terraform v1.5+" },
-      { label: "Objectif de ressources", value: "15 ressources interconnectées" },
-      { label: "Méthode", value: "Déclarative, centralisée dans un état local" },
-    ],
-  },
-  {
-    n: "03",
-    title: "Création du VPC",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "Provisioning de la ressource aws_vpc via Terraform : le VPC « Lab-vpc1 » est créé avec le support DNS activé (enable_dns_support et enable_dns_hostnames) afin de permettre la résolution de noms pour les instances internes.",
-    details: [
-      { label: "Nom", value: "Lab-vpc1" },
-      { label: "ID VPC", value: "vpc-0ce4313e36c3c8a56" },
-      { label: "CIDR IPv4", value: "10.2.0.0/16" },
-      { label: "État", value: "Available" },
-    ],
-  },
-  {
-    n: "04",
-    title: "Déploiement des sous-réseaux publics et privés",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "Quatre sous-réseaux sont créés via une ressource aws_subnet itérée : deux publics (map_public_ip_on_launch = true) et deux privés, répartis sur les deux AZ pour garantir la redondance et la haute disponibilité.",
-    image: "/images/console-subnets.jpg",
-    imageAlt: "Liste des sous-réseaux publics et privés dans la console AWS",
-    details: [
-      { label: "public-subnet-1", value: "10.2.1.0/24 — eu-west-1a" },
-      { label: "public-subnet-2", value: "10.2.2.0/24 — eu-west-1b" },
-      { label: "private-subnet-1", value: "10.2.3.0/24 — eu-west-1a" },
-      { label: "private-subnet-2", value: "10.2.4.0/24 — eu-west-1b" },
-    ],
-  },
-  {
-    n: "05",
-    title: "Création et attachement de l'Internet Gateway",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "Une passerelle Internet (aws_internet_gateway) est créée puis attachée au VPC. Elle constitue le point d'entrée/sortie du trafic Internet pour les sous-réseaux publics.",
-    details: [
-      { label: "Nom", value: "Lab-vpc1-igw" },
-      { label: "ID", value: "igw-0862c36420d2634b4" },
-      { label: "Attaché à", value: "vpc-0ce4313e36c3c8a56 (Lab-vpc1)" },
-    ],
-  },
-  {
-    n: "06",
-    title: "Allocation d'une adresse IP Elastic",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "Une adresse IP Elastic (aws_eip) est allouée dans le domaine VPC. Elle sera rattachée à la NAT Gateway afin de lui fournir une adresse IP publique fixe, indispensable pour le trafic sortant des sous-réseaux privés.",
-    image: "/images/console-eip.jpg",
-    imageAlt: "Adresse IP Elastic allouée dans la console AWS",
-    details: [
-      { label: "Adresse IPv4 publique", value: "34.250.237.153" },
-      { label: "ID d'allocation", value: "eipalloc-0ab3f711c56b2fc33" },
-      { label: "Adresse IP privée associée", value: "10.2.1.184" },
-    ],
-  },
-  {
-    n: "07",
-    title: "Déploiement de la NAT Gateway",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "La ressource aws_nat_gateway est déployée dans le sous-réseau public 1 (eu-west-1a) et associée à l'Elastic IP. Terraform gère la dépendance implicite via depends_on sur l'Internet Gateway.",
-    image: "/images/console-natgw.jpg",
-    imageAlt: "Passerelle NAT disponible dans la console AWS",
-    details: [
-      { label: "Nom", value: "Lab-vpc1-nat-gw" },
-      { label: "ID", value: "nat-0af6cc5dcbe178827" },
-      { label: "Type de connectivité", value: "Public — mode de distribution Zonal" },
-      { label: "État", value: "Available" },
-    ],
-  },
-  {
-    n: "08",
-    title: "Configuration des tables de routage",
-    phase: "Action",
-    phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
-    description:
-      "Deux tables de routage sont créées : une table publique dont la route par défaut (0.0.0.0/0) pointe vers l'Internet Gateway, et une table privée dont la route par défaut pointe vers la NAT Gateway.",
-    image: "/images/console-routes.jpg",
-    imageAlt: "Table de routage privée avec route par défaut vers la NAT Gateway",
-    details: [
-      { label: "Lab-vpc1-public-rt", value: "0.0.0.0/0 → igw-0862c36420d2634b4" },
-      { label: "Lab-vpc1-private-rt", value: "0.0.0.0/0 → nat-0af6cc5dcbe178827" },
-      { label: "Route locale (les deux)", value: "10.2.0.0/16 → local" },
-    ],
-  },
-  {
-    n: "09",
-    title: "Validation et Cartographie Finale",
-    phase: "Résultat",
-    phaseColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    description:
-      "La console AWS génère automatiquement la cartographie des ressources du VPC, confirmant la cohérence de l'architecture et la réussite de la livraison globale.",
-    image: "/images/console-vpc-map.jpg",
-    imageAlt: "Cartographie automatique des ressources du VPC dans la console AWS",
-    details: [
-      { label: "Sous-réseaux", value: "4" },
-      { label: "Tables de routage", value: "3 (dont 1 par défaut)" },
-      { label: "Connexions réseau", value: "2 (Internet Gateway + NAT Gateway)" },
-    ],
-  },
-];
+type StepTimelineProps = {
+  lang: "fr" | "en";
+};
 
-export default function StepTimeline() {
+const headings = {
+  fr: {
+    tag: "Déroulé technique",
+    title: "Étapes du déploiement technique",
+    desc: "Retracez les actions d'implémentation logique de l'infrastructure, corrélées aux phases de notre cahier des charges.",
+  },
+  en: {
+    tag: "Technical Workflow",
+    title: "Technical Deployment Steps",
+    desc: "Follow the logical infrastructure implementation actions, aligned with the project specification phases.",
+  },
+};
+
+const stepsData: { fr: Step[]; en: Step[] } = {
+  fr: [
+    {
+      n: "01",
+      title: "Planification du plan d'adressage",
+      phase: "Contexte",
+      phaseColor: "bg-amber-100 text-amber-800 border-amber-200",
+      description:
+        "Analyse du besoin et conception de la topologie réseau. Choix du bloc CIDR global et de sa segmentation en sous-réseaux pour héberger des ressources distinctes de manière sécurisée (public/privé).",
+      details: [
+        { label: "Région", value: "eu-west-1 (Europe - Irlande)" },
+        { label: "CIDR VPC", value: "10.2.0.0/16" },
+        { label: "Zones de disponibilité", value: "eu-west-1a, eu-west-1b" },
+      ],
+    },
+    {
+      n: "02",
+      title: "Définition des cibles d'interconnexion",
+      phase: "Objectif",
+      phaseColor: "bg-blue-100 text-blue-800 border-blue-200",
+      description:
+        "Ciblage des ressources AWS nécessaires pour former notre infrastructure cible. Établissement des dépendances et de la structure globale du projet de code Terraform (HCL).",
+      details: [
+        { label: "Outil de déploiement", value: "Terraform v1.5+" },
+        { label: "Objectif de ressources", value: "15 ressources interconnectées" },
+        { label: "Méthode", value: "Déclarative, centralisée dans un état local" },
+      ],
+    },
+    {
+      n: "03",
+      title: "Création du VPC",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Provisioning de la ressource aws_vpc via Terraform : le VPC « Lab-vpc1 » est créé avec le support DNS activé (enable_dns_support et enable_dns_hostnames) afin de permettre la résolution de noms pour les instances internes.",
+      details: [
+        { label: "Nom", value: "Lab-vpc1" },
+        { label: "ID VPC", value: "vpc-0ce4313e36c3c8a56" },
+        { label: "CIDR IPv4", value: "10.2.0.0/16" },
+        { label: "État", value: "Available" },
+      ],
+    },
+    {
+      n: "04",
+      title: "Déploiement des sous-réseaux publics et privés",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Quatre sous-réseaux sont créés via une ressource aws_subnet itérée : deux publics (map_public_ip_on_launch = true) et deux privés, répartis sur les deux AZ pour garantir la redondance et la haute disponibilité.",
+      image: "/images/console-subnets.jpg",
+      imageAlt: "Liste des sous-réseaux publics et privés dans la console AWS",
+      details: [
+        { label: "public-subnet-1", value: "10.2.1.0/24 — eu-west-1a" },
+        { label: "public-subnet-2", value: "10.2.2.0/24 — eu-west-1b" },
+        { label: "private-subnet-1", value: "10.2.3.0/24 — eu-west-1a" },
+        { label: "private-subnet-2", value: "10.2.4.0/24 — eu-west-1b" },
+      ],
+    },
+    {
+      n: "05",
+      title: "Création et attachement de l'Internet Gateway",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Une passerelle Internet (aws_internet_gateway) est créée puis attachée au VPC. Elle constitue le point d'entrée/sortie du trafic Internet pour les sous-réseaux publics.",
+      details: [
+        { label: "Nom", value: "Lab-vpc1-igw" },
+        { label: "ID", value: "igw-0862c36420d2634b4" },
+        { label: "Attaché à", value: "vpc-0ce4313e36c3c8a56 (Lab-vpc1)" },
+      ],
+    },
+    {
+      n: "06",
+      title: "Allocation d'une adresse IP Elastic",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Une adresse IP Elastic (aws_eip) est allouée dans le domaine VPC. Elle sera rattachée à la NAT Gateway afin de lui fournir une adresse IP publique fixe, indispensable pour le trafic sortant des sous-réseaux privés.",
+      image: "/images/console-eip.jpg",
+      imageAlt: "Adresse IP Elastic allouée dans la console AWS",
+      details: [
+        { label: "Adresse IPv4 publique", value: "34.250.237.153" },
+        { label: "ID d'allocation", value: "eipalloc-0ab3f711c56b2fc33" },
+        { label: "Adresse IP privée associée", value: "10.2.1.184" },
+      ],
+    },
+    {
+      n: "07",
+      title: "Déploiement de la NAT Gateway",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "La ressource aws_nat_gateway est déployée dans le sous-réseau public 1 (eu-west-1a) et associée à l'Elastic IP. Terraform gère la dépendance implicite via depends_on sur l'Internet Gateway.",
+      image: "/images/console-natgw.jpg",
+      imageAlt: "Passerelle NAT disponible dans la console AWS",
+      details: [
+        { label: "Nom", value: "Lab-vpc1-nat-gw" },
+        { label: "ID", value: "nat-0af6cc5dcbe178827" },
+        { label: "Type de connectivité", value: "Public — mode de distribution Zonal" },
+        { label: "État", value: "Available" },
+      ],
+    },
+    {
+      n: "08",
+      title: "Configuration des tables de routage",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Deux tables de routage sont créées : une table publique dont la route par défaut (0.0.0.0/0) pointe vers l'Internet Gateway, et une table privée dont la route par défaut pointe vers la NAT Gateway.",
+      image: "/images/console-routes.jpg",
+      imageAlt: "Table de routage privée avec route par défaut vers la NAT Gateway",
+      details: [
+        { label: "Lab-vpc1-public-rt", value: "0.0.0.0/0 → igw-0862c36420d2634b4" },
+        { label: "Lab-vpc1-private-rt", value: "0.0.0.0/0 → nat-0af6cc5dcbe178827" },
+        { label: "Route locale (les deux)", value: "10.2.0.0/16 → local" },
+      ],
+    },
+    {
+      n: "09",
+      title: "Validation et Cartographie Finale",
+      phase: "Résultat",
+      phaseColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      description:
+        "La console AWS génère automatiquement la cartographie des ressources du VPC, confirmant la cohérence de l'architecture et la réussite de la livraison globale.",
+      image: "/images/console-vpc-map.jpg",
+      imageAlt: "Cartographie automatique des ressources du VPC dans la console AWS",
+      details: [
+        { label: "Sous-réseaux", value: "4" },
+        { label: "Tables de routage", value: "3 (dont 1 par défaut)" },
+        { label: "Connexions réseau", value: "2 (Internet Gateway + NAT Gateway)" },
+      ],
+    },
+  ],
+  en: [
+    {
+      n: "01",
+      title: "Address Space Planning",
+      phase: "Context",
+      phaseColor: "bg-amber-100 text-amber-800 border-amber-200",
+      description:
+        "Need analysis and network topology design. Choosing the root CIDR block and dividing it into subnets to host distinct resources securely (public/private).",
+      details: [
+        { label: "Region", value: "eu-west-1 (Europe - Ireland)" },
+        { label: "VPC CIDR", value: "10.2.0.0/16" },
+        { label: "Availability Zones", value: "eu-west-1a, eu-west-1b" },
+      ],
+    },
+    {
+      n: "02",
+      title: "Defining Interconnection Targets",
+      phase: "Objective",
+      phaseColor: "bg-blue-100 text-blue-800 border-blue-200",
+      description:
+        "Targeting the necessary AWS resources to form our core network infrastructure. Establishing dependencies and the general folder structure for the Terraform (HCL) code.",
+      details: [
+        { label: "Deployment tool", value: "Terraform v1.5+" },
+        { label: "Target resources count", value: "15 interconnected resources" },
+        { label: "Method", value: "Declarative, centralized in a local state" },
+      ],
+    },
+    {
+      n: "03",
+      title: "Creating the VPC",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Provisioning the aws_vpc resource via Terraform: the 'Lab-vpc1' VPC is created with DNS support enabled (enable_dns_support and enable_dns_hostnames) to allow domain resolution for internal instances.",
+      details: [
+        { label: "Name", value: "Lab-vpc1" },
+        { label: "VPC ID", value: "vpc-0ce4313e36c3c8a56" },
+        { label: "IPv4 CIDR", value: "10.2.0.0/16" },
+        { label: "State", value: "Available" },
+      ],
+    },
+    {
+      n: "04",
+      title: "Deploying Public and Private Subnets",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Four subnets are created using a looped aws_subnet resource: two public (map_public_ip_on_launch = true) and two private, distributed across both AZs to guarantee network redundancy and HA.",
+      image: "/images/console-subnets.jpg",
+      imageAlt: "Public and private subnets listing in the AWS console",
+      details: [
+        { label: "public-subnet-1", value: "10.2.1.0/24 — eu-west-1a" },
+        { label: "public-subnet-2", value: "10.2.2.0/24 — eu-west-1b" },
+        { label: "private-subnet-1", value: "10.2.3.0/24 — eu-west-1a" },
+        { label: "private-subnet-2", value: "10.2.4.0/24 — eu-west-1b" },
+      ],
+    },
+    {
+      n: "05",
+      title: "Creating and Attaching the Internet Gateway",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "An Internet Gateway (aws_internet_gateway) is created then attached to the VPC. It acts as the ingress/egress point of contact for the public subnets.",
+      details: [
+        { label: "Name", value: "Lab-vpc1-igw" },
+        { label: "ID", value: "igw-0862c36420d2634b4" },
+        { label: "Attached to", value: "vpc-0ce4313e36c3c8a56 (Lab-vpc1)" },
+      ],
+    },
+    {
+      n: "06",
+      title: "Allocating an Elastic IP Address",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "An Elastic IP (aws_eip) is allocated in the VPC domain. It will be associated with the NAT Gateway to provide a static public IP address, which is mandatory for private subnet outgoing flows.",
+      image: "/images/console-eip.jpg",
+      imageAlt: "Elastic IP allocated in the AWS console",
+      details: [
+        { label: "Public IPv4 address", value: "34.250.237.153" },
+        { label: "Allocation ID", value: "eipalloc-0ab3f711c56b2fc33" },
+        { label: "Associated private IP", value: "10.2.1.184" },
+      ],
+    },
+    {
+      n: "07",
+      title: "Deploying the NAT Gateway",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "The aws_nat_gateway resource is deployed inside public-subnet-1 (eu-west-1a) and associated with the Elastic IP. Terraform handles the implicit dependency using depends_on on the Internet Gateway.",
+      image: "/images/console-natgw.jpg",
+      imageAlt: "NAT Gateway available in the AWS console",
+      details: [
+        { label: "Name", value: "Lab-vpc1-nat-gw" },
+        { label: "ID", value: "nat-0af6cc5dcbe178827" },
+        { label: "Connectivity Type", value: "Public — Zonal distribution" },
+        { label: "State", value: "Available" },
+      ],
+    },
+    {
+      n: "08",
+      title: "Configuring Route Tables",
+      phase: "Action",
+      phaseColor: "bg-orange-100 text-orange-800 border-orange-200",
+      description:
+        "Two route tables are created: a public route table whose default route (0.0.0.0/0) points to the Internet Gateway, and a private route table whose default route points to the NAT Gateway.",
+      image: "/images/console-routes.jpg",
+      imageAlt: "Private route table with default route to the NAT Gateway",
+      details: [
+        { label: "Lab-vpc1-public-rt", value: "0.0.0.0/0 → igw-0862c36420d2634b4" },
+        { label: "Lab-vpc1-private-rt", value: "0.0.0.0/0 → nat-0af6cc5dcbe178827" },
+        { label: "Local route (both)", value: "10.2.0.0/16 → local" },
+      ],
+    },
+    {
+      n: "09",
+      title: "Validation and Final Resource Map",
+      phase: "Result",
+      phaseColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      description:
+        "The AWS console automatically compiles the VPC resource map, validating the architectural consistency and proving overall delivery success.",
+      image: "/images/console-vpc-map.jpg",
+      imageAlt: "Automatic VPC resource map in the AWS console",
+      details: [
+        { label: "Subnets", value: "4" },
+        { label: "Route Tables", value: "3 (including default)" },
+        { label: "Network Connections", value: "2 (Internet Gateway + NAT Gateway)" },
+      ],
+    },
+  ],
+};
+
+export default function StepTimeline({ lang }: StepTimelineProps) {
+  const text = headings[lang];
+  const steps = stepsData[lang];
+
   return (
     <section id="deploiement" className="bg-slate-50 py-24 border-t border-slate-100">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mb-16 max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-orange-600">Déroulé technique</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-orange-600">{text.tag}</p>
           <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">
-            Étapes du déploiement technique
+            {text.title}
           </h2>
           <p className="mt-4 text-slate-600">
-            Retracez les actions d'implémentation logique de l'infrastructure, corrélées aux phases de notre cahier des charges.
+            {text.desc}
           </p>
         </div>
 

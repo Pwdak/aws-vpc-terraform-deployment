@@ -1,4 +1,39 @@
-const mainTf = `# main.tf — Fondation réseau AWS
+type TerraformSectionProps = {
+  lang: "fr" | "en";
+};
+
+const headings = {
+  fr: {
+    tag: "Automatisation IaC",
+    title: "Le déploiement par le code (Terraform)",
+    desc: "Afin d'éviter toute dérive de configuration (le redoutable « Configuration Drift ») et de pouvoir reproduire l'intégralité du réseau à l'infini en un clic, le projet a été développé de manière purement déclarative. C'est l'essence même de l'étape Action de notre méthodologie.",
+    workflow: "Workflow d'Exécution CLI",
+    terminalDesc: "Le Résultat en console : 15 ressources créées de manière atomique (VPC, 4 sous-réseaux, EIP, NAT Gateway, Internet Gateway, 2 tables de routage et 4 associations de sous-réseaux).",
+    steps: [
+      { cmd: "terraform init", desc: "Initialise le répertoire de travail, télécharge le fournisseur AWS et configure le backend d'état." },
+      { cmd: "terraform fmt && terraform validate", desc: "Formate et valide la syntaxe et la cohérence sémantique des fichiers .tf avant exécution." },
+      { cmd: "terraform plan -out=plan.out", desc: "Calcule l'ordre de déploiement et montre à l'avance les 15 ressources qui vont être créées sans altérer AWS." },
+      { cmd: "terraform apply plan.out", desc: "Provisionne réellement les ressources sur la console AWS de manière transactionnelle." },
+      { cmd: "terraform output", desc: "Permet de récupérer les variables d'état (VPC ID, NAT Gateway IP) pour d'autres modules ou pipelines." },
+    ],
+  },
+  en: {
+    tag: "IaC Automation",
+    title: "Deployment through Code (Terraform)",
+    desc: "To prevent configuration drift and allow infinite, click-of-a-button replication of the entire network, the project was developed declaratively. This is the cornerstone of the Action phase in our engineering methodology.",
+    workflow: "CLI Execution Workflow",
+    terminalDesc: "Console Output: 15 resources created atomically (VPC, 4 subnets, EIP, NAT Gateway, Internet Gateway, 2 route tables, and 4 subnet associations).",
+    steps: [
+      { cmd: "terraform init", desc: "Initializes the working directory, downloads the AWS provider, and configures the backend state." },
+      { cmd: "terraform fmt && terraform validate", desc: "Formats and validates syntax and semantic consistency of the .tf files prior to execution." },
+      { cmd: "terraform plan -out=plan.out", desc: "Computes the deployment graph and previews the 15 resources to be created without modifying AWS." },
+      { cmd: "terraform apply plan.out", desc: "Actually provisions resources on the live AWS console in a transactional manner." },
+      { cmd: "terraform output", desc: "Retrieves output variables (VPC ID, NAT Gateway IP) for downstream modules or CI/CD pipelines." },
+    ],
+  },
+};
+
+const mainTf = `# main.tf — AWS Network Foundation
 
 resource "aws_vpc" "lab_vpc" {
   cidr_block           = var.vpc_cidr
@@ -45,7 +80,7 @@ resource "aws_nat_gateway" "nat" {
   tags = { Name = "Lab-vpc1-nat-gw" }
 }`;
 
-const routesTf = `# routes.tf — Tables de routage
+const routesTf = `# routes.tf — Route Tables
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.lab_vpc.id
@@ -81,26 +116,15 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }`;
 
-const cliSteps = [
-  { cmd: "terraform init", desc: "Initialise le répertoire de travail, télécharge le fournisseur AWS et configure le backend d'état." },
-  { cmd: "terraform fmt && terraform validate", desc: "Formate et valide la syntaxe et la cohérence sémantique des fichiers .tf avant exécution." },
-  { cmd: "terraform plan -out=plan.out", desc: "Calcule l'ordre de déploiement et montre à l'avance les 15 ressources qui vont être créées sans altérer AWS." },
-  { cmd: "terraform apply plan.out", desc: "Provisionne réellement les ressources sur la console AWS de manière transactionnelle." },
-  { cmd: "terraform output", desc: "Permet de récupérer les variables d'état (VPC ID, NAT Gateway IP) pour d'autres modules ou pipelines." },
-];
-
-export default function TerraformSection() {
+export default function TerraformSection({ lang }: TerraformSectionProps) {
+  const text = headings[lang];
   return (
     <section id="terraform" className="bg-slate-50 py-24 border-t border-slate-100">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mb-14 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-orange-600">Automatisation IaC</p>
-          <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">Le déploiement par le code (Terraform)</h2>
-          <p className="mt-4 text-slate-600">
-            Afin d'éviter tout dérive de configuration (le redoutable « Configuration Drift ») et de pouvoir
-            reproduire l'intégralité du réseau à l'infini en un clic, le projet a été développé de manière purement déclarative.
-            C'est l'essence même de l'étape <strong className="text-orange-600">Action</strong> de la méthode STAR.
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-orange-600">{text.tag}</p>
+          <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">{text.title}</h2>
+          <p className="mt-4 text-slate-600">{text.desc}</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">
@@ -137,9 +161,9 @@ export default function TerraformSection() {
 
         <div className="mt-16 grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <h3 className="mb-4 text-base font-bold text-slate-900">Workflow d'Exécution CLI</h3>
+            <h3 className="mb-4 text-base font-bold text-slate-900">{text.workflow}</h3>
             <ol className="space-y-3">
-              {cliSteps.map((s, i) => (
+              {text.steps.map((s, i) => (
                 <li key={s.cmd} className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-xs font-bold text-orange-600">
                     {i + 1}
@@ -162,7 +186,7 @@ export default function TerraformSection() {
               />
             </div>
             <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-              <strong>Le Résultat en console :</strong> 15 ressources créées de manière atomique (VPC, 4 sous-réseaux, EIP, NAT Gateway, Internet Gateway, 2 tables de routage et 4 associations de sous-réseaux).
+              <strong>{text.terminalDesc}</strong>
             </p>
           </div>
         </div>

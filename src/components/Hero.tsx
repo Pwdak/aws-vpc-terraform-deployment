@@ -1,4 +1,40 @@
-export default function Hero() {
+type HeroProps = {
+  lang: "fr" | "en";
+};
+
+const content = {
+  fr: {
+    badge: "Projet Cloud & Infrastructure as Code",
+    title: "Déploiement automatisé d'une infrastructure réseau ",
+    vpc: "AWS VPC",
+    desc: "Conception et provisioning d'un réseau privé virtuel (VPC) complet — sous-réseaux publics/privés, Internet Gateway, NAT Gateway, Elastic IP et tables de routage — entièrement automatisé avec Terraform sur la région AWS Europe (Irlande).",
+    stats: [
+      { value: "1", label: "VPC — 10.2.0.0/16" },
+      { value: "4", label: "Sous-réseaux" },
+      { value: "2", label: "AZ (eu-west-1a/1b)" },
+      { value: "100%", label: "Automatisé Terraform" },
+    ],
+    cta1: "Découvrir la démarche",
+    cta2: "Voir l'architecture",
+  },
+  en: {
+    badge: "Cloud Project & Infrastructure as Code",
+    title: "Automated Deployment of an ",
+    vpc: "AWS VPC Network",
+    desc: "Design and provisioning of a complete virtual private network (VPC) — public/private subnets, Internet Gateway, NAT Gateway, Elastic IP, and route tables — fully automated with Terraform in the AWS Europe (Ireland) region.",
+    stats: [
+      { value: "1", label: "VPC — 10.2.0.0/16" },
+      { value: "4", label: "Subnets" },
+      { value: "2", label: "AZ (eu-west-1a/1b)" },
+      { value: "100%", label: "Terraform Automated" },
+    ],
+    cta1: "Discover the process",
+    cta2: "View Architecture",
+  },
+};
+
+export default function Hero({ lang }: HeroProps) {
+  const current = content[lang];
   return (
     <section id="top" className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-orange-50/20 to-white pt-36 pb-24 text-slate-800">
       {/* Grille technique d'arrière-plan */}
@@ -6,24 +42,17 @@ export default function Hero() {
 
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-100/50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-orange-700">
-          Projet Cloud &amp; Infrastructure as Code
+          {current.badge}
         </div>
         <h1 className="max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-          Déploiement automatisé d'une infrastructure réseau <span className="bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">AWS VPC</span>
+          {current.title} <span className="bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">{current.vpc}</span>
         </h1>
         <p className="mt-6 max-w-3xl text-lg leading-relaxed text-slate-600">
-          Conception et provisioning d'un réseau privé virtuel (VPC) complet — sous-réseaux publics/privés,
-          Internet Gateway, NAT Gateway, Elastic IP et tables de routage — entièrement automatisé avec
-          <span className="font-semibold text-slate-900"> Terraform</span> sur la région AWS Europe (Irlande).
+          {current.desc}
         </p>
 
         <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[
-            { value: "1", label: "VPC — 10.2.0.0/16" },
-            { value: "4", label: "Sous-réseaux" },
-            { value: "2", label: "AZ (eu-west-1a/1b)" },
-            { value: "100%", label: "Automatisé Terraform" },
-          ].map((stat) => (
+          {current.stats.map((stat) => (
             <div
               key={stat.label}
               className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-100"
@@ -39,13 +68,13 @@ export default function Hero() {
             href="#contexte"
             className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
           >
-            Découvrir le contexte
+            {current.cta1}
           </a>
           <a
             href="#architecture"
             className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-orange-500 hover:text-orange-600"
           >
-            Voir l'architecture
+            {current.cta2}
           </a>
         </div>
       </div>
